@@ -2,44 +2,177 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>PORTAL</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#1e1b4b"> 
+
+<title>PORTAL</title>
   <link rel="icon" href="https://png.pngtree.com/png-vector/20220710/ourmid/pngtree-garuda-indonesia-illustration-with-red-and-white-wavy-flag-png-image_5750966.png" />
+
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background-color: #eee;
-      overflow: hidden; /* Mencegah scroll ganda */
+    /* CSS Native: Lebih ringan dari Tailwind CDN untuk kasus ini */
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a, #312e81, #1e3a8a);
+      --glass-bg: rgba(255, 255, 255, 0.1);
+      --glass-border: rgba(255, 255, 255, 0.2);
     }
 
-    .iframe-container {
-      width: 100%;
-      height: 100dvh; /* Menggunakan dvh agar pas di mobile browser */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100vh;
+      width: 100vw;
       overflow: hidden;
+      background: var(--bg-gradient);
+      color: white;
     }
 
+    /* Fullscreen Wrapper */
+    .full-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      transition: opacity 0.5s ease;
+    }
+
+    /* Iframe */
     iframe {
-      display: block;
       width: 100%;
       height: 100%;
       border: none;
+      display: block;
+      background: white; /* Mencegah transparan saat load */
     }
+
+    /* Loading Spinner */
+    .loader {
+      width: 48px;
+      height: 48px;
+      border: 5px solid rgba(255, 255, 255, 0.3);
+      border-bottom-color: #fff;
+      border-radius: 50%;
+      animation: rotation 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+
+    @keyframes rotation {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Error Card */
+    .error-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      padding: 2.5rem;
+      border-radius: 1rem;
+      text-align: center;
+      max-width: 90%;
+      width: 400px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .btn-retry {
+      margin-top: 1.5rem;
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: 999px;
+      border: none;
+      background: white;
+      color: #0f172a;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-retry:active { transform: scale(0.98); }
+
+    /* Utility Classes */
+    .hidden { display: none !important; }
+    .fade-out { opacity: 0; pointer-events: none; }
   </style>
 </head>
+
 <body>
-  <div class="iframe-container">
-    <iframe
-      id="app"
-      src="https://script.google.com/macros/s/AKfycbwW_1w_i7i0FuESZQ0YQv2HoXBKBh_ZdrocB0M069piQ5L9Px3EkI2eZH-k1ctMJTsdVQ/exec"
-      scrolling="yes"
-      allowfullscreen="true"
-      webkitallowfullscreen="true"
-      mozallowfullscreen="true"
-      allow="fullscreen; camera; microphone; display-capture; geolocation;">
-    </iframe>
+
+  <div id="loading" class="full-screen" style="background: var(--bg-gradient);">
+    <div class="loader"></div>
+    <p style="opacity: 0.8; letter-spacing: 0.5px; font-size: 0.9rem;">
+      Memuat Soal Ujian...
+    </p>
   </div>
+
+  <div id="error404" class="full-screen hidden">
+    <div class="error-card">
+      <h1 style="font-size: 3rem; font-weight: 800; margin-bottom: 0.5rem;">404</h1>
+      <p style="opacity: 0.9; line-height: 1.5;">
+        Gagal terhubung ke server CBT.<br>
+        Periksa koneksi internet atau link ujian.
+      </p>
+      <button onclick="location.reload()" class="btn-retry">Coba Lagi</button>
+    </div>
+  </div>
+
+  <iframe
+    id="app"
+    class="hidden"
+    allow="fullscreen; camera; microphone; geolocation"
+    sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-top-navigation">
+  </iframe>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwW_1w_i7i0FuESZQ0YQv2HoXBKBh_ZdrocB0M069piQ5L9Px3EkI2eZH-k1ctMJTsdVQ/exec";
+
+    const loadingEl = document.getElementById("loading");
+    const errorEl = document.getElementById("error404");
+    const iframeEl = document.getElementById("app");
+
+    iframeEl.src = SCRIPT_URL;
+
+    const timeoutTimer = setTimeout(() => {
+      if (!loadingEl.classList.contains('fade-out')) {
+        showError();
+      }
+    }, 15000);
+
+    iframeEl.onload = function() {
+      clearTimeout(timeoutTimer);
+      
+      loadingEl.classList.add('fade-out');
+      iframeEl.classList.remove('hidden');
+      
+      setTimeout(() => loadingEl.style.display = 'none', 500);
+    };
+
+    fetch(SCRIPT_URL + "?health=1")
+      .then(res => {
+        if (!res.ok) throw new Error("HTTP Error");
+        return res.json().catch(() => ({ status: 'unknown' })); 
+      })
+      .then(data => {
+
+        console.log("CBT System Check: Online");
+      })
+      .catch(err => {
+        console.error("CBT System Check: Failed", err);
+    
+        if (loadingEl.classList.contains('fade-out') === false) {
+           showError();
+        }
+      });
+
+    function showError() {
+      loadingEl.style.display = 'none';
+      iframeEl.style.display = 'none';
+      errorEl.classList.remove('hidden');
+    }
+  </script>
+
 </body>
 </html>
